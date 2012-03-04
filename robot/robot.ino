@@ -27,8 +27,9 @@ int gOffset = 0;
 // total des collisions sans offset et direction nord
 int gCollision = 0;
 
-int turnMultiplier = 1300; //ms par 90degré de rotation
-float speedModificator = 13; //77.5mm par sec
+int turnMultiplierLeft = 1300; //ms par 90degré de rotation
+int turnMultiplierRight = 1150; //ms par 90degré de rotation
+int speedModificator = 13; //77.5mm par sec
 int leftspeed = 255;  //255 is maximum speed  
 int rightspeed = 255; 
 
@@ -49,29 +50,15 @@ void loop(void)
   while (Serial.available() < 4 ); // Wait until a character is received 
   char command = Serial.read();
   int magnitude = readInt();
-  Serial.println(magnitude);
+  
   gCollision = 0;
   gOffset = 0;
   gTotalTime = 0;
   gResponse = "";
   move(command, magnitude, 0);
   
-  //Envoyer un réponse
-  //TODO: passer en fonction et generer gResponse
-  /*
-  Serial.print(command);
-  Serial.print(",");
-  if(command == 'f' || command == 'b'){
-    Serial.print(int( gTotalTime / speedModificator ));
-  } else {
-    Serial.print(magnitude);
-  }
-  Serial.print(",");
-  Serial.print(gCollision);
-  Serial.print(":");
+  Serial.print(gResponse);
   Serial.println(";");
-  */
-
 }
 
 // Orientation: 0: going up, 1:going left, -1:going right
@@ -80,6 +67,8 @@ int move(char command,int magnitude, int orientation) {
   int timeCount = 0;
   int timeLimit = 0;
   int continueTrack = 0;
+  boolean displayMsg = true;
+  /*
   Serial.print("move(");
   Serial.print(command);
   Serial.print(",");
@@ -87,6 +76,7 @@ int move(char command,int magnitude, int orientation) {
   Serial.print(",");
   Serial.print(orientation);
   Serial.println(");");
+  */
   
   switch(command) // Perform an action depending on the command 
   {
@@ -100,11 +90,13 @@ int move(char command,int magnitude, int orientation) {
     break; 
   case 'l'://Turn Left 
     left();
-    timeLimit = magnitude * turnMultiplier;
+    gResponse += "l,"+String(magnitude)+",0:";
+    timeLimit = magnitude * turnMultiplierLeft;
     break; 
   case 'r'://Turn Right 
     right(); 
-    timeLimit = magnitude * turnMultiplier;
+    gResponse += "r,"+String(magnitude)+",0:";
+    timeLimit = magnitude * turnMultiplierRight;
     break; 
   default: 
     stop(); 
@@ -127,6 +119,8 @@ int move(char command,int magnitude, int orientation) {
       if( orientation ==0 && sense()) {
         //we are moving left
         stop();
+        gResponse += "f,"+String(timeCount/speedModificator)+",0:";
+        displayMsg = false;
         
         if(gOffset <= 49) {
           gCollision += 1;
@@ -158,8 +152,13 @@ int move(char command,int magnitude, int orientation) {
     }
   }
   stop();
-  //TODO: retablir offset
+  
+  if(displayMsg){
+    gResponse += "f,"+String(timeCount/speedModificator)+",1:";
+  }
+  
   if(command == 'f') {
+    
     // going west
     if( orientation == 1) {
       //turn right; move or go back left
@@ -241,7 +240,6 @@ void right ()
 
 boolean sense(void) // Sense objects
 { 
-  
   // read the analog in value:
   sensorValue1 = analogRead(analogInPin1);            
   sensorValue2 = analogRead(analogInPin2);            
